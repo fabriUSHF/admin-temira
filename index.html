@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TEMIRA | Panel de Administración</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pink-50: #fef1f5; --pink-100: #fde4ec; --pink-500: #ec4899; --pink-600: #db2777; --pink-deep: #be185d;
+            --bg: #f8f2f5; --white: #ffffff; --dark: #3d2233; --dark-mid: #5c3d50; --dark-soft: #7a5a6e;
+            --muted: #a07d94; --border: rgba(236,72,153,0.12); --shadow-md: 0 8px 32px rgba(190,24,93,0.07);
+            --radius: 16px; --radius-sm: 10px; --radius-pill: 100px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Montserrat', sans-serif; background: var(--bg); color: var(--dark); min-height: 100vh; }
+        
+        .login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--white); }
+        .login-box { background: var(--white); padding: 50px 40px; border-radius: var(--radius); box-shadow: var(--shadow-md); text-align: center; max-width: 400px; width: 90%; border: 1px solid var(--border); }
+        .login-box h1 { font-family: 'Playfair Display', serif; letter-spacing: 8px; margin-bottom: 10px; font-weight: 400; }
+        .login-box p { font-size: 0.8rem; color: var(--muted); margin-bottom: 30px; }
+        .login-box input { width: 100%; padding: 14px 18px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'Montserrat', sans-serif; font-size: 0.9rem; outline: none; }
+        .login-box input:focus { border-color: var(--pink-500); }
+        .login-box button { width: 100%; padding: 14px; background: var(--dark); color: white; border: none; border-radius: var(--radius-pill); font-family: 'Montserrat', sans-serif; font-size: 0.8rem; letter-spacing: 2px; cursor: pointer; transition: 0.3s; }
+        .login-box button:hover { background: var(--pink-deep); }
+        .login-error { color: #e11d48; font-size: 0.8rem; margin-top: 10px; display: none; }
+
+        .dashboard { display: none; padding: 30px 30px 30px 30px; max-width: 1200px; margin: 0 auto; }
+        .dashboard.active { display: block; }
+        .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid var(--border); }
+        .dash-header h1 { font-family: 'Playfair Display', serif; letter-spacing: 5px; font-weight: 400; }
+        .btn-logout { background: none; border: 1px solid var(--pink-500); color: var(--pink-600); padding: 8px 20px; border-radius: var(--radius-pill); font-size: 0.75rem; letter-spacing: 1px; cursor: pointer; font-family: 'Montserrat', sans-serif; transition: 0.3s; }
+        .btn-logout:hover { background: var(--pink-500); color: white; }
+
+        /* Menú de navegación */
+        .admin-nav { display: flex; gap: 15px; margin-bottom: 30px; }
+        .admin-nav button { padding: 10px 25px; border: none; border-radius: var(--radius-pill); font-family: 'Montserrat', sans-serif; font-size: 0.8rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: 0.3s; background: var(--white); color: var(--dark-soft); border: 1px solid var(--border); }
+        .admin-nav button.active { background: var(--dark); color: white; border-color: var(--dark); }
+        .admin-nav button:hover { background: var(--pink-50); }
+
+        .form-section { background: var(--white); padding: 30px; border-radius: var(--radius); box-shadow: var(--shadow-md); margin-bottom: 40px; border: 1px solid var(--border); }
+        .form-section h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; letter-spacing: 2px; margin-bottom: 20px; font-weight: 400; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .form-grid input, .form-grid select { width: 100%; padding: 12px 15px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'Montserrat', sans-serif; font-size: 0.85rem; outline: none; }
+        .form-grid input:focus, .form-grid select:focus { border-color: var(--pink-500); }
+        .imagen-help { font-size: 0.72rem; color: var(--muted); margin-top: -10px; margin-bottom: 15px; }
+        .imagen-help a { color: var(--pink-600); text-decoration: underline; }
+        .btn-add { padding: 14px 30px; background: var(--pink-600); color: white; border: none; border-radius: var(--radius-pill); font-family: 'Montserrat', sans-serif; font-size: 0.8rem; letter-spacing: 2px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
+        .btn-add:hover { background: var(--pink-deep); transform: translateY(-2px); }
+
+        .product-list-section h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; letter-spacing: 2px; margin-bottom: 20px; font-weight: 400; }
+        .product-card-admin { background: var(--white); border-radius: var(--radius); padding: 20px; margin-bottom: 15px; display: flex; align-items: center; gap: 20px; border: 1px solid var(--border); transition: 0.3s; }
+        .product-card-admin:hover { box-shadow: var(--shadow-md); transform: translateX(5px); }
+        .admin-img { width: 80px; height: 80px; border-radius: var(--radius-sm); object-fit: cover; background: var(--pink-50); }
+        .admin-info { flex: 1; }
+        .admin-info h3 { font-size: 1rem; letter-spacing: 1px; text-transform: uppercase; }
+        .admin-info p { font-size: 0.8rem; color: var(--muted); }
+        .admin-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn-action { padding: 8px 14px; border: none; border-radius: var(--radius-pill); font-size: 0.7rem; font-family: 'Montserrat', sans-serif; font-weight: 600; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-edit { background: var(--pink-50); color: var(--pink-deep); }
+        .btn-toggle { background: #e0f2fe; color: #0369a1; }
+        .btn-offer { background: #fff1f2; color: #e11d48; }
+        .btn-rebaja { background: #fef2f2; color: #dc2626; }
+        .btn-delete { background: #fee2e2; color: #b91c1c; }
+        .btn-delete-review { background: #fee2e2; color: #b91c1c; }
+        .btn-action:hover { transform: scale(1.05); }
+        .status-badge { font-size: 0.65rem; padding: 4px 10px; border-radius: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-top: 5px; }
+        .status-agotado { background: #f3f4f6; color: #6b7280; }
+        .status-oferta { background: #ffe4e6; color: #e11d48; }
+        .status-rebaja { background: #fef2f2; color: #dc2626; }
+
+        .review-list-section h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; letter-spacing: 2px; margin-bottom: 20px; font-weight: 400; }
+        .review-card { background: var(--white); border-radius: var(--radius); padding: 20px; margin-bottom: 15px; display: flex; align-items: center; gap: 20px; border: 1px solid var(--border); transition: 0.3s; }
+        .review-card:hover { box-shadow: var(--shadow-md); }
+        .review-info { flex: 1; }
+        .review-info h3 { font-size: 1rem; letter-spacing: 1px; text-transform: uppercase; }
+        .review-stars { color: #f59e0b; font-size: 0.9rem; margin-bottom: 5px; }
+        .review-text { font-size: 0.85rem; color: var(--dark-mid); margin-bottom: 5px; font-style: italic; }
+        .review-date { font-size: 0.7rem; color: var(--muted); }
+
+        .modal-edit { display: none; position: fixed; inset: 0; background: rgba(61,34,51,0.5); backdrop-filter: blur(5px); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-edit.active { display: flex; }
+        .modal-content { background: var(--white); padding: 30px; border-radius: var(--radius); width: 90%; max-width: 450px; }
+        .modal-content h3 { font-family: 'Playfair Display', serif; margin-bottom: 20px; letter-spacing: 2px; }
+        .modal-content input, .modal-content select { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'Montserrat', sans-serif; outline: none; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; }
+        .btn-cancel { padding: 10px 20px; background: var(--pink-50); color: var(--dark-soft); border: none; border-radius: var(--radius-pill); cursor: pointer; font-family: 'Montserrat', sans-serif; }
+        .btn-save { padding: 10px 20px; background: var(--dark); color: white; border: none; border-radius: var(--radius-pill); cursor: pointer; font-family: 'Montserrat', sans-serif; }
+        
+        @media (max-width: 600px) {
+            .product-card-admin, .review-card { flex-direction: column; text-align: center; }
+            .admin-actions { justify-content: center; }
+            .dash-header { flex-direction: column; gap: 15px; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <h1>TEMIRA</h1>
+            <p>Panel de Administración Privado</p>
+            <input type="email" id="emailInput" placeholder="Tu correo de admin">
+            <input type="password" id="passInput" placeholder="Tu contraseña">
+            <button onclick="loginAdmin()">Ingresar al Panel</button>
+            <p class="login-error" id="loginError">Correo o contraseña incorrectos.</p>
+        </div>
+    </div>
+
+    <div class="dashboard" id="dashboard">
+        <div class="dash-header">
+            <h1>ADMIN TEMIRA</h1>
+            <button class="btn-logout" onclick="logoutAdmin()">Cerrar Sesión</button>
+        </div>
+
+        <!-- Menú de navegación -->
+        <div class="admin-nav">
+            <button class="active" onclick="scrollToSection('productos')">📦 Productos</button>
+            <button onclick="scrollToSection('resenas')">⭐ Reseñas</button>
+        </div>
+
+        <!-- SECCIÓN PRODUCTOS -->
+        <div id="seccion-productos">
+            <div class="form-section">
+                <h2>Agregar Nuevo Producto</h2>
+                <div class="form-grid">
+                    <input type="text" id="newId" placeholder="ID del producto (ej: p27)" required>
+                    <input type="text" id="newNombre" placeholder="Nombre del producto" required>
+                    <input type="text" id="newDesc" placeholder="Descripción breve">
+                    <input type="text" id="newPrecio" placeholder="Ej: Q150.00 (o dejar vacío)">
+                    <select id="newCategoria">
+                        <option value="aretes">Aretes</option>
+                        <option value="dijes">Dijes</option>
+                        <option value="cadenas">Cadenas</option>
+                        <option value="anillos">Anillos</option>
+                        <option value="pulceras">Pulseras</option>
+                        <option value="juegos">Juegos</option>
+                    </select>
+                    <input type="text" id="newOferta" placeholder="Texto oferta (Ej: 30% OFF)">
+                    <input type="text" id="newRebaja" placeholder="Precio rebajado (Ej: Q99.00)">
+                    <input type="text" id="newImagen" placeholder="Link público de la imagen" required>
+                </div>
+                <p class="imagen-help">
+                    📸 Sube tu imagen a un servicio como imgbb.com y pega el enlace directo.
+                </p>
+                <button class="btn-add" id="btnAddProduct" onclick="addProduct()">
+                    + Agregar Producto
+                </button>
+            </div>
+
+            <div class="product-list-section">
+                <h2>Productos Actuales</h2>
+                <div id="adminProductList"></div>
+            </div>
+        </div>
+
+        <!-- SECCIÓN RESEÑAS -->
+        <div id="seccion-resenas" style="margin-top: 50px;">
+            <div class="review-list-section">
+                <h2>Reseñas de Clientes</h2>
+                <div id="adminReviewList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR PRODUCTO -->
+    <div class="modal-edit" id="editModal">
+        <div class="modal-content">
+            <h3>Editar Producto</h3>
+            <input type="hidden" id="editId">
+            <input type="text" id="editNombre" placeholder="Nombre">
+            <input type="text" id="editDesc" placeholder="Descripción">
+            <input type="text" id="editPrecio" placeholder="Precio (Ej: Q150.00)">
+            <input type="text" id="editOferta" placeholder="Texto Oferta (vacío si no tiene)">
+            <input type="text" id="editRebaja" placeholder="Precio Rebajado (vacío si no tiene)">
+            <input type="text" id="editImagen" placeholder="Link de la imagen">
+            <select id="editCategoria">
+                <option value="aretes">Aretes</option>
+                <option value="dijes">Dijes</option>
+                <option value="cadenas">Cadenas</option>
+                <option value="anillos">Anillos</option>
+                <option value="pulceras">Pulseras</option>
+                <option value="juegos">Juegos</option>
+            </select>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeEditModal()">Cancelar</button>
+                <button class="btn-save" onclick="saveEdit()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyD9tCLAH5bh_7u0UNEvX37ECpWm_NJo6Wk",
+            authDomain: "temirajoyeria.firebaseapp.com",
+            databaseURL: "https://temirajoyeria-default-rtdb.firebaseio.com",
+            projectId: "temirajoyeria",
+            messagingSenderId: "873760773069",
+            appId: "1:873760773069:web:a11710639eb16ec163ea84"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        function loginAdmin() {
+            const email = document.getElementById('emailInput').value;
+            const pass = document.getElementById('passInput').value;
+            auth.signInWithEmailAndPassword(email, pass)
+                .then(() => { document.getElementById('loginError').style.display = 'none'; })
+                .catch((error) => { document.getElementById('loginError').style.display = 'block'; });
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboard').classList.add('active');
+                loadProducts();
+                loadReviews();
+            } else {
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('dashboard').classList.remove('active');
+            }
+        });
+
+        function logoutAdmin() { auth.signOut(); }
+
+        // Navegación suave
+        function scrollToSection(section) {
+            if (section === 'productos') {
+                document.getElementById('seccion-productos').scrollIntoView({ behavior: 'smooth' });
+                setActiveNavButton(0);
+            } else if (section === 'resenas') {
+                document.getElementById('seccion-resenas').scrollIntoView({ behavior: 'smooth' });
+                setActiveNavButton(1);
+            }
+        }
+
+        function setActiveNavButton(index) {
+            const buttons = document.querySelectorAll('.admin-nav button');
+            buttons.forEach((btn, i) => {
+                btn.classList.toggle('active', i === index);
+            });
+        }
+
+        // ============ PRODUCTOS ============
+        async function addProduct() {
+            const id = document.getElementById('newId').value.trim();
+            const nombre = document.getElementById('newNombre').value.trim();
+            const imagen = document.getElementById('newImagen').value.trim();
+
+            if (!id) { alert("Escribe un ID (ej: p27)"); return; }
+            if (!nombre) { alert("Escribe el nombre del producto"); return; }
+            if (!imagen) { alert("Pega el link de la imagen"); return; }
+
+            const snap = await db.ref('tienda/' + id).once('value');
+            if (snap.exists()) {
+                if (!confirm("El ID '" + id + "' ya existe. ¿Deseas sobrescribirlo?")) return;
+            }
+
+            await db.ref('tienda/' + id).set({
+                categoria: document.getElementById('newCategoria').value,
+                nombre: nombre,
+                descripcion: document.getElementById('newDesc').value.trim(),
+                precio: document.getElementById('newPrecio').value.trim(),
+                imagen: imagen,
+                mensaje: nombre,
+                oferta: document.getElementById('newOferta').value.trim(),
+                rebaja: document.getElementById('newRebaja').value.trim(),
+                agotado: false
+            });
+
+            alert("¡Producto agregado exitosamente!");
+            document.getElementById('newId').value = '';
+            document.getElementById('newNombre').value = '';
+            document.getElementById('newDesc').value = '';
+            document.getElementById('newPrecio').value = '';
+            document.getElementById('newOferta').value = '';
+            document.getElementById('newRebaja').value = '';
+            document.getElementById('newImagen').value = '';
+        }
+
+        function loadProducts() {
+            db.ref('tienda').on('value', snapshot => {
+                const list = document.getElementById('adminProductList');
+                list.innerHTML = '';
+                const data = snapshot.val();
+                if (!data) { list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px;">No hay productos aún.</p>'; return; }
+
+                Object.keys(data).forEach(id => {
+                    const p = data[id];
+                    
+                    let statusHtml = '';
+                    if (p.agotado) statusHtml += '<span class="status-badge status-agotado">AGOTADO</span> ';
+                    if (p.oferta && p.oferta.trim() !== '') statusHtml += '<span class="status-badge status-oferta">OFERTA</span> ';
+                    if (p.rebaja && p.rebaja.trim() !== '') statusHtml += '<span class="status-badge status-rebaja">REBAJA: ' + p.rebaja + '</span> ';
+
+                    list.innerHTML += `
+                        <div class="product-card-admin">
+                            <img src="${p.imagen}" class="admin-img" alt="${p.nombre}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2280%22 height=%2280%22><rect fill=%22%23fde4ec%22 width=%2280%22 height=%2280%22/><text x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23a07d94%22 font-size=%2210%22>Sin img</text></svg>'">
+                            <div class="admin-info">
+                                <h3>${p.nombre} <small style="color:var(--muted)">(${id})</small></h3>
+                                <p>Categoría: ${p.categoria || 'Sin categoría'} | Precio: ${p.precio || 'Consultar'}</p>
+                                ${statusHtml}
+                            </div>
+                            <div class="admin-actions">
+                                <button class="btn-action btn-edit" onclick="openEditModal('${id}')">Editar</button>
+                                <button class="btn-action btn-toggle" onclick="toggleAgotado('${id}', ${p.agotado || false})">${p.agotado ? 'Activar' : 'Agotado'}</button>
+                                <button class="btn-action btn-offer" onclick="toggleOferta('${id}')">${p.oferta ? 'Quitar Oferta' : 'Oferta'}</button>
+                                <button class="btn-action btn-rebaja" onclick="toggleRebaja('${id}')">${p.rebaja ? 'Quitar Rebaja' : 'Rebaja'}</button>
+                                <button class="btn-action btn-delete" onclick="deleteProduct('${id}')">Eliminar</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        function toggleAgotado(id, currentState) { db.ref('tienda/' + id + '/agotado').set(!currentState); }
+
+        function toggleOferta(id) {
+            db.ref('tienda/' + id + '/oferta').once('value').then(snap => {
+                if (snap.val()) { db.ref('tienda/' + id + '/oferta').remove(); } 
+                else {
+                    const text = prompt("Escribe el texto de la oferta:"); 
+                    if (text && text.trim() !== '') db.ref('tienda/' + id + '/oferta').set(text.trim());
+                }
+            });
+        }
+
+        function toggleRebaja(id) {
+            db.ref('tienda/' + id + '/rebaja').once('value').then(snap => {
+                if (snap.val()) { db.ref('tienda/' + id + '/rebaja').remove(); } 
+                else {
+                    const text = prompt("Escribe el precio rebajado (ej: Q99.00):"); 
+                    if (text && text.trim() !== '') db.ref('tienda/' + id + '/rebaja').set(text.trim());
+                }
+            });
+        }
+
+        function deleteProduct(id) { 
+            if (confirm("¿Eliminar el producto '" + id + "' permanentemente?")) {
+                db.ref('tienda/' + id).remove(); 
+            }
+        }
+
+        function openEditModal(id) {
+            db.ref('tienda/' + id).once('value').then(snap => {
+                const p = snap.val();
+                document.getElementById('editId').value = id;
+                document.getElementById('editNombre').value = p.nombre || '';
+                document.getElementById('editDesc').value = p.descripcion || '';
+                document.getElementById('editPrecio').value = p.precio || '';
+                document.getElementById('editOferta').value = p.oferta || '';
+                document.getElementById('editRebaja').value = p.rebaja || '';
+                document.getElementById('editImagen').value = p.imagen || '';
+                document.getElementById('editCategoria').value = p.categoria || 'aretes';
+                document.getElementById('editModal').classList.add('active');
+            });
+        }
+
+        function closeEditModal() { document.getElementById('editModal').classList.remove('active'); }
+
+        function saveEdit() {
+            const id = document.getElementById('editId').value;
+            const nombre = document.getElementById('editNombre').value.trim();
+            if (!nombre) { alert("El nombre es obligatorio"); return; }
+            
+            db.ref('tienda/' + id).update({
+                nombre: nombre,
+                descripcion: document.getElementById('editDesc').value.trim(),
+                precio: document.getElementById('editPrecio').value.trim(),
+                oferta: document.getElementById('editOferta').value.trim(),
+                rebaja: document.getElementById('editRebaja').value.trim(),
+                imagen: document.getElementById('editImagen').value.trim(),
+                categoria: document.getElementById('editCategoria').value,
+                mensaje: nombre
+            }).then(() => { 
+                closeEditModal(); 
+                alert("Producto actualizado correctamente"); 
+            });
+        }
+
+        // ============ RESEÑAS ============
+        function loadReviews() {
+            db.ref('resenas').on('value', snapshot => {
+                const container = document.getElementById('adminReviewList');
+                container.innerHTML = '';
+                const data = snapshot.val();
+                if (!data) { 
+                    container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px;">No hay reseñas aún.</p>'; 
+                    return; 
+                }
+
+                const arr = Object.entries(data).reverse();
+                arr.forEach(([key, review]) => {
+                    const date = review.fecha ? new Date(review.fecha).toLocaleDateString('es-GT', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Sin fecha';
+                    const stars = '★'.repeat(review.estrellas || 5) + '☆'.repeat(5 - (review.estrellas || 5));
+                    container.innerHTML += `
+                        <div class="review-card">
+                            <div class="review-info">
+                                <h3>${escapeHtml(review.nombre || 'Anónimo')}</h3>
+                                <div class="review-stars">${stars}</div>
+                                <p class="review-text">"${escapeHtml(review.texto || '')}"</p>
+                                <div class="review-date">${date}</div>
+                            </div>
+                            <div class="admin-actions">
+                                <button class="btn-action btn-delete-review" onclick="deleteReview('${key}')">Eliminar</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        function deleteReview(key) {
+            if (confirm("¿Eliminar esta reseña permanentemente?")) {
+                db.ref('resenas/' + key).remove()
+                    .then(() => alert("Reseña eliminada"))
+                    .catch(err => alert("Error: " + err.message));
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
