@@ -103,7 +103,6 @@
         .stat-card.stat-warn .stat-number { color: #dc2626; }
         .stat-card.stat-gold .stat-number { color: #d97706; }
 
-        /* Animación de entrada para las tarjetas */
         @keyframes statFadeIn {
             from { opacity: 0; transform: translateY(16px); }
             to   { opacity: 1; transform: translateY(0); }
@@ -118,7 +117,6 @@
 
         /* ============ FIN DASHBOARD STATS ============ */
 
-        /* Menú de navegación */
         .admin-nav { display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }
         .admin-nav button { padding: 10px 25px; border: none; border-radius: var(--radius-pill); font-family: 'Montserrat', sans-serif; font-size: 0.8rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: 0.3s; background: var(--white); color: var(--dark-soft); border: 1px solid var(--border); }
         .admin-nav button.active { background: var(--dark); color: white; border-color: var(--dark); }
@@ -147,6 +145,7 @@
         .btn-toggle { background: #e0f2fe; color: #0369a1; }
         .btn-offer { background: #fff1f2; color: #e11d48; }
         .btn-rebaja { background: #fef2f2; color: #dc2626; }
+        .btn-nuevo { background: #d1fae5; color: #065f46; }
         .btn-delete { background: #fee2e2; color: #b91c1c; }
         .btn-delete-review { background: #fee2e2; color: #b91c1c; }
         .btn-action:hover { transform: scale(1.05); }
@@ -154,6 +153,7 @@
         .status-agotado { background: #f3f4f6; color: #6b7280; }
         .status-oferta { background: #ffe4e6; color: #e11d48; }
         .status-rebaja { background: #fef2f2; color: #dc2626; }
+        .status-nuevo { background: #d1fae5; color: #065f46; }
 
         .review-list-section h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; letter-spacing: 2px; margin-bottom: 20px; font-weight: 400; }
         .review-card { background: var(--white); border-radius: var(--radius); padding: 20px; margin-bottom: 15px; display: flex; align-items: center; gap: 20px; border: 1px solid var(--border); transition: 0.3s; }
@@ -368,48 +368,30 @@
         }
 
         // ============ ESTADÍSTICAS DEL DASHBOARD ============
-        // Variables en memoria para calcular stats sin llamadas extra
         let productosData = null;
         let resenasData = null;
 
         function loadDashboardStats() {
-            // Si aún no se han cargado ambos datasets, esperar
             if (productosData === null || resenasData === null) return;
 
             const productos = productosData;
             const resenas = resenasData;
 
-            // 1. Total de productos
             const totalProductos = productos ? Object.keys(productos).length : 0;
 
-            // 2. Productos agotados
             let agotados = 0;
-            if (productos) {
-                Object.values(productos).forEach(p => {
-                    if (p.agotado === true) agotados++;
-                });
-            }
-
-            // 3. Productos en oferta (campo oferta con texto no vacío)
             let enOferta = 0;
-            if (productos) {
-                Object.values(productos).forEach(p => {
-                    if (p.oferta && typeof p.oferta === 'string' && p.oferta.trim() !== '') enOferta++;
-                });
-            }
-
-            // 4. Productos rebajados (campo rebaja con texto no vacío)
             let rebajados = 0;
             if (productos) {
                 Object.values(productos).forEach(p => {
+                    if (p.agotado === true) agotados++;
+                    if (p.oferta && typeof p.oferta === 'string' && p.oferta.trim() !== '') enOferta++;
                     if (p.rebaja && typeof p.rebaja === 'string' && p.rebaja.trim() !== '') rebajados++;
                 });
             }
 
-            // 5. Total de reseñas
             const totalResenas = resenas ? Object.keys(resenas).length : 0;
 
-            // 6. Promedio de estrellas
             let promedioEstrellas = 0;
             if (resenas && totalResenas > 0) {
                 let sumaEstrellas = 0;
@@ -419,7 +401,6 @@
                 promedioEstrellas = (sumaEstrellas / totalResenas).toFixed(1);
             }
 
-            // Actualizar el DOM con animación de conteo
             animateCounter('statTotal', totalProductos);
             animateCounter('statAgotados', agotados);
             animateCounter('statOferta', enOferta);
@@ -428,19 +409,15 @@
             animateCounterFloat('statPromedio', parseFloat(promedioEstrellas));
         }
 
-        // Animación de conteo para números enteros
         function animateCounter(elementId, target) {
             const el = document.getElementById(elementId);
             const current = parseInt(el.textContent) || 0;
             if (current === target) return;
-
             const duration = 600;
             const startTime = performance.now();
-
             function step(timestamp) {
                 const elapsed = timestamp - startTime;
                 const progress = Math.min(elapsed / duration, 1);
-                // Ease out cubic
                 const eased = 1 - Math.pow(1 - progress, 3);
                 const value = Math.round(current + (target - current) * eased);
                 el.textContent = value;
@@ -449,15 +426,12 @@
             requestAnimationFrame(step);
         }
 
-        // Animación de conteo para números decimales (promedio)
         function animateCounterFloat(elementId, target) {
             const el = document.getElementById(elementId);
             const current = parseFloat(el.textContent) || 0;
             if (Math.abs(current - target) < 0.05) { el.textContent = target.toFixed(1); return; }
-
             const duration = 600;
             const startTime = performance.now();
-
             function step(timestamp) {
                 const elapsed = timestamp - startTime;
                 const progress = Math.min(elapsed / duration, 1);
@@ -477,7 +451,7 @@
                 const list = document.getElementById('adminProductList');
                 list.innerHTML = '';
                 const data = snapshot.val();
-                productosData = data; // Guardar para estadísticas
+                productosData = data;
 
                 if (!data) {
                     list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px;">No hay productos aún.</p>';
@@ -492,6 +466,7 @@
                     if (p.agotado) statusHtml += '<span class="status-badge status-agotado">AGOTADO</span> ';
                     if (p.oferta && p.oferta.trim() !== '') statusHtml += '<span class="status-badge status-oferta">OFERTA</span> ';
                     if (p.rebaja && p.rebaja.trim() !== '') statusHtml += '<span class="status-badge status-rebaja">REBAJA: ' + p.rebaja + '</span> ';
+                    if (p.nuevo) statusHtml += '<span class="status-badge status-nuevo">NUEVO</span> ';
 
                     list.innerHTML += `
                         <div class="product-card-admin">
@@ -506,13 +481,13 @@
                                 <button class="btn-action btn-toggle" onclick="toggleAgotado('${id}', ${p.agotado || false})">${p.agotado ? 'Activar' : 'Agotado'}</button>
                                 <button class="btn-action btn-offer" onclick="toggleOferta('${id}')">${p.oferta ? 'Quitar Oferta' : 'Oferta'}</button>
                                 <button class="btn-action btn-rebaja" onclick="toggleRebaja('${id}')">${p.rebaja ? 'Quitar Rebaja' : 'Rebaja'}</button>
+                                <button class="btn-action btn-nuevo" onclick="toggleNuevo('${id}', ${p.nuevo || false})">${p.nuevo ? 'Quitar Nuevo' : 'Nuevo'}</button>
                                 <button class="btn-action btn-delete" onclick="deleteProduct('${id}')">Eliminar</button>
                             </div>
                         </div>
                     `;
                 });
 
-                // Recalcular estadísticas cada vez que cambian los productos
                 loadDashboardStats();
             });
         }
@@ -540,7 +515,8 @@
                 mensaje: nombre,
                 oferta: document.getElementById('newOferta').value.trim(),
                 rebaja: document.getElementById('newRebaja').value.trim(),
-                agotado: false
+                agotado: false,
+                nuevo: true
             });
 
             alert("¡Producto agregado exitosamente!");
@@ -575,6 +551,8 @@
             });
         }
 
+        function toggleNuevo(id, currentState) { db.ref('tienda/' + id + '/nuevo').set(!currentState); }
+
         function deleteProduct(id) {
             if (confirm("¿Eliminar el producto '" + id + "' permanentemente?")) {
                 db.ref('tienda/' + id).remove();
@@ -603,18 +581,21 @@
             const nombre = document.getElementById('editNombre').value.trim();
             if (!nombre) { alert("El nombre es obligatorio"); return; }
 
-            db.ref('tienda/' + id).update({
-                nombre: nombre,
-                descripcion: document.getElementById('editDesc').value.trim(),
-                precio: document.getElementById('editPrecio').value.trim(),
-                oferta: document.getElementById('editOferta').value.trim(),
-                rebaja: document.getElementById('editRebaja').value.trim(),
-                imagen: document.getElementById('editImagen').value.trim(),
-                categoria: document.getElementById('editCategoria').value,
-                mensaje: nombre
-            }).then(() => {
-                closeEditModal();
-                alert("Producto actualizado correctamente");
+            db.ref('tienda/' + id + '/nuevo').once('value').then(snap => {
+                db.ref('tienda/' + id).update({
+                    nombre: nombre,
+                    descripcion: document.getElementById('editDesc').value.trim(),
+                    precio: document.getElementById('editPrecio').value.trim(),
+                    oferta: document.getElementById('editOferta').value.trim(),
+                    rebaja: document.getElementById('editRebaja').value.trim(),
+                    imagen: document.getElementById('editImagen').value.trim(),
+                    categoria: document.getElementById('editCategoria').value,
+                    mensaje: nombre,
+                    nuevo: snap.val() === true
+                }).then(() => {
+                    closeEditModal();
+                    alert("Producto actualizado correctamente");
+                });
             });
         }
 
@@ -624,7 +605,7 @@
                 const container = document.getElementById('adminReviewList');
                 container.innerHTML = '';
                 const data = snapshot.val();
-                resenasData = data; // Guardar para estadísticas
+                resenasData = data;
 
                 if (!data) {
                     container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px;">No hay reseñas aún.</p>';
@@ -651,7 +632,6 @@
                     `;
                 });
 
-                // Recalcular estadísticas cada vez que cambian las reseñas
                 loadDashboardStats();
             });
         }
