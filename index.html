@@ -35,11 +35,23 @@
         .btn-logout { background: none; border: 1px solid var(--pink-500); color: var(--pink-600); padding: 8px 20px; border-radius: var(--radius-pill); font-size: 0.75rem; letter-spacing: 1px; cursor: pointer; font-family: 'Montserrat', sans-serif; transition: 0.3s; }
         .btn-logout:hover { background: var(--pink-500); color: white; }
 
-        /* Menú de navegación */
         .admin-nav { display: flex; gap: 15px; margin-bottom: 30px; }
         .admin-nav button { padding: 10px 25px; border: none; border-radius: var(--radius-pill); font-family: 'Montserrat', sans-serif; font-size: 0.8rem; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: 0.3s; background: var(--white); color: var(--dark-soft); border: 1px solid var(--border); }
         .admin-nav button.active { background: var(--dark); color: white; border-color: var(--dark); }
         .admin-nav button:hover { background: var(--pink-50); }
+
+        .dashboard-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 35px; }
+        .stat-card { background: var(--white); padding: 22px 16px; border-radius: var(--radius); box-shadow: var(--shadow-md); text-align: center; border: 1px solid var(--border); transition: 0.3s; }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(190,24,93,0.12); }
+        .stat-icon { font-size: 1.6rem; margin-bottom: 8px; display: block; }
+        .stat-number { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 700; color: var(--dark); line-height: 1.2; }
+        .stat-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 6px; font-weight: 500; }
+        .stat-card:nth-child(1) .stat-icon { color: var(--pink-600); }
+        .stat-card:nth-child(2) .stat-icon { color: #6b7280; }
+        .stat-card:nth-child(3) .stat-icon { color: #e11d48; }
+        .stat-card:nth-child(4) .stat-icon { color: #dc2626; }
+        .stat-card:nth-child(5) .stat-icon { color: #f59e0b; }
+        .stat-card:nth-child(6) .stat-icon { color: #8b5cf6; }
 
         .form-section { background: var(--white); padding: 30px; border-radius: var(--radius); box-shadow: var(--shadow-md); margin-bottom: 40px; border: 1px solid var(--border); }
         .form-section h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; letter-spacing: 2px; margin-bottom: 20px; font-weight: 400; }
@@ -94,6 +106,7 @@
             .product-card-admin, .review-card { flex-direction: column; text-align: center; }
             .admin-actions { justify-content: center; }
             .dash-header { flex-direction: column; gap: 15px; text-align: center; }
+            .dashboard-stats { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
@@ -116,13 +129,44 @@
             <button class="btn-logout" onclick="logoutAdmin()">Cerrar Sesión</button>
         </div>
 
-        <!-- Menú de navegación -->
+        <div class="dashboard-stats" id="dashboardStats">
+            <div class="stat-card">
+                <span class="stat-icon">📦</span>
+                <span class="stat-number" id="statTotal">0</span>
+                <span class="stat-label">Total Productos</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">🚫</span>
+                <span class="stat-number" id="statAgotados">0</span>
+                <span class="stat-label">Agotados</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">🏷️</span>
+                <span class="stat-number" id="statOfertas">0</span>
+                <span class="stat-label">En Oferta</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">💰</span>
+                <span class="stat-number" id="statRebajas">0</span>
+                <span class="stat-label">Rebajados</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">💬</span>
+                <span class="stat-number" id="statResenas">0</span>
+                <span class="stat-label">Reseñas</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-icon">⭐</span>
+                <span class="stat-number" id="statPromedio">0.0</span>
+                <span class="stat-label">Promedio</span>
+            </div>
+        </div>
+
         <div class="admin-nav">
             <button class="active" onclick="scrollToSection('productos')">📦 Productos</button>
             <button onclick="scrollToSection('resenas')">⭐ Reseñas</button>
         </div>
 
-        <!-- SECCIÓN PRODUCTOS -->
         <div id="seccion-productos">
             <div class="form-section">
                 <h2>Agregar Nuevo Producto</h2>
@@ -157,7 +201,6 @@
             </div>
         </div>
 
-        <!-- SECCIÓN RESEÑAS -->
         <div id="seccion-resenas" style="margin-top: 50px;">
             <div class="review-list-section">
                 <h2>Reseñas de Clientes</h2>
@@ -166,7 +209,6 @@
         </div>
     </div>
 
-    <!-- MODAL EDITAR PRODUCTO -->
     <div class="modal-edit" id="editModal">
         <div class="modal-content">
             <h3>Editar Producto</h3>
@@ -205,6 +247,9 @@
         const auth = firebase.auth();
         const db = firebase.database();
 
+        var productosData = null;
+        var resenasData = null;
+
         function loginAdmin() {
             const email = document.getElementById('emailInput').value;
             const pass = document.getElementById('passInput').value;
@@ -227,7 +272,6 @@
 
         function logoutAdmin() { auth.signOut(); }
 
-        // Navegación suave
         function scrollToSection(section) {
             if (section === 'productos') {
                 document.getElementById('seccion-productos').scrollIntoView({ behavior: 'smooth' });
@@ -245,7 +289,45 @@
             });
         }
 
-        // ============ PRODUCTOS ============
+        function loadDashboardStats() {
+            var total = 0;
+            var agotados = 0;
+            var ofertas = 0;
+            var rebajados = 0;
+
+            if (productosData) {
+                var keys = Object.keys(productosData);
+                total = keys.length;
+                keys.forEach(function(key) {
+                    var p = productosData[key];
+                    if (p.agotado) agotados++;
+                    if (p.oferta && p.oferta.trim() !== '') ofertas++;
+                    if (p.rebaja && p.rebaja.trim() !== '') rebajados++;
+                });
+            }
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statAgotados').textContent = agotados;
+            document.getElementById('statOfertas').textContent = ofertas;
+            document.getElementById('statRebajas').textContent = rebajadas;
+
+            var totalResenas = 0;
+            var sumaEstrellas = 0;
+            var promedio = '0.0';
+
+            if (resenasData) {
+                var reviewKeys = Object.keys(resenasData);
+                totalResenas = reviewKeys.length;
+                reviewKeys.forEach(function(key) {
+                    sumaEstrellas += (resenasData[key].estrellas || 0);
+                });
+                promedio = totalResenas > 0 ? (sumaEstrellas / totalResenas).toFixed(1) : '0.0';
+            }
+
+            document.getElementById('statResenas').textContent = totalResenas;
+            document.getElementById('statPromedio').textContent = promedio;
+        }
+
         async function addProduct() {
             const id = document.getElementById('newId').value.trim();
             const nombre = document.getElementById('newNombre').value.trim();
@@ -287,6 +369,8 @@
                 const list = document.getElementById('adminProductList');
                 list.innerHTML = '';
                 const data = snapshot.val();
+                productosData = data;
+                loadDashboardStats();
                 if (!data) { list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px;">No hay productos aún.</p>'; return; }
 
                 Object.keys(data).forEach(id => {
@@ -301,8 +385,8 @@
                         <div class="product-card-admin">
                             <img src="${p.imagen}" class="admin-img" alt="${p.nombre}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2280%22 height=%2280%22><rect fill=%22%23fde4ec%22 width=%2280%22 height=%2280%22/><text x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23a07d94%22 font-size=%2210%22>Sin img</text></svg>'">
                             <div class="admin-info">
-                                <h3>${p.nombre} <small style="color:var(--muted)">(${id})</small></h3>
-                                <p>Categoría: ${p.categoria || 'Sin categoría'} | Precio: ${p.precio || 'Consultar'}</p>
+                                <h3>${escapeHtml(p.nombre)} <small style="color:var(--muted)">(${id})</small></h3>
+                                <p>Categoría: ${escapeHtml(p.categoria || 'Sin categoría')} | Precio: ${escapeHtml(p.precio || 'Consultar')}</p>
                                 ${statusHtml}
                             </div>
                             <div class="admin-actions">
@@ -383,12 +467,13 @@
             });
         }
 
-        // ============ RESEÑAS ============
         function loadReviews() {
             db.ref('resenas').on('value', snapshot => {
                 const container = document.getElementById('adminReviewList');
                 container.innerHTML = '';
                 const data = snapshot.val();
+                resenasData = data;
+                loadDashboardStats();
                 if (!data) { 
                     container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px;">No hay reseñas aún.</p>'; 
                     return; 
@@ -418,7 +503,7 @@
         function deleteReview(key) {
             if (confirm("¿Eliminar esta reseña permanentemente?")) {
                 db.ref('resenas/' + key).remove()
-                    .then(() => alert("Reseña eliminada"))
+                    .then(() => { alert("Reseña eliminada"); resenasData = null; loadDashboardStats(); })
                     .catch(err => alert("Error: " + err.message));
             }
         }
